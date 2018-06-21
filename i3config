@@ -1,0 +1,8 @@
+# brightness
+bindsym XF86MonBrightnessUp exec brightness up
+bindsym XF86MonBrightnessdown exec brightness down
+
+# volume
+bindsym XF86AudioRaiseVolume exec volume up
+bindsym XF86AudioLowerVolume exec volume down
+bindsym XF86AudioMute exec volume 0

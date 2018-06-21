@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# Requires pulseaudio pactl command
+# Requires notify-osd package. Remember to uninstall other notification daemons such as dunst.
+
+# Usage:
+#   volume up
+#   volume down
+#   volume 30
+
+AMOUNT=3
+case "$1" in
+    up)
+	SWITCH="+"
+	;;
+    down)
+	SWITCH="-"
+	;;
+    *)
+        SWITCH=""
+	AMOUNT=$1
+	;;
+esac
+
+pactl set-sink-volume 0 $SWITCH$AMOUNT%
+VALUE=`pactl list sinks | grep '^[[:space:]]Volume:' | head -n $(( $SINK + 1 )) | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'` # ew
+
+if [ "$VALUE" -eq "0" ]; then
+    ICON="muted"
+elif [ "$VALUE" -le "30" ]; then
+    ICON="low"
+elif [ "$VALUE" -gt "30" ] && [ "$VALUE" -le "70" ]; then
+    ICON="medium"
+elif [ "$VALUE" -gt "70" ]; then
+    ICON="high"
+fi
+
+kill $(pgrep ^notify-osd$)
+notify-send --icon=notification-audio-volume-$ICON --hint=int:value:$VALUE " "

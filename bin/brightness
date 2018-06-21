@@ -1,0 +1,39 @@
+#!/bin/bash
+
+# Requires light command from https://github.com/haikarainen/light
+# Requires notify-osd package. Remember to uninstall other notification daemons such as dunst.
+
+# Usage:
+#   brightness up
+#   brightness down
+#   brightness 70
+
+AMOUNT=5
+case "$1" in
+    up)
+	SWITCH="A"
+	;;
+    down)
+	SWITCH="U"
+	;;
+    *)
+        SWITCH="S"
+	AMOUNT=$1
+	;;
+esac
+
+light -$SWITCH $AMOUNT
+VALUE=$( printf "%.0f" `light -G` )
+
+if [ "$VALUE" -le "30" ]; then
+    ICON="low"
+elif [ "$VALUE" -gt "30" ] && [ "$VALUE" -le "60" ]; then
+    ICON="medium"
+elif [ "$VALUE" -gt "60" ] && [ "$VALUE" -le "100" ]; then
+    ICON="high"
+elif [ "$VALUE" -eq "100" ]; then
+    ICON="full"
+fi
+
+kill $(pgrep ^notify-osd$)
+notify-send --icon=notification-display-brightness-$ICON --hint=int:value:$VALUE " "
