@@ -11,29 +11,46 @@
 AMOUNT=3
 case "$1" in
     up)
-	SWITCH="+"
-	;;
+    SWITCH="+"
+    ;;
     down)
-	SWITCH="-"
-	;;
+    SWITCH="-"
+    ;;
     *)
         SWITCH=""
-	AMOUNT=$1
-	;;
+        AMOUNT=$1
+    ;;
 esac
 
-pactl set-sink-volume 0 $SWITCH$AMOUNT%
-VALUE=`pactl list sinks | grep '^[[:space:]]Volume:' | head -n $(( $SINK + 1 )) | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'` # ew
+# Persist/restore volume across mute/unmute
 
-if [ "$VALUE" -eq "0" ]; then
+function getCurrentVolume() {
+    CURRENT_VOLUME=`pactl list sinks | grep '^[[:space:]]Volume:' | head -n $(( $SINK + 1 )) | tail -n 1 | sed -e 's,.* \([0-9][0-9]*\)%.*,\1,'` # ew
+}
+
+if [ "$SWITCH" = "" ] && [ "$AMOUNT" -eq "0" ]; then
+    getCurrentVolume
+    if [ "$CURRENT_VOLUME" -eq "0" ] && [ -f /tmp/mmkeys_previous_volume ]; then
+        # this is an unmute
+        AMOUNT=`cat /tmp/mmkeys_previous_volume`
+        rm /tmp/mmkeys_previous_volume
+    else
+        tee /tmp/mmkeys_previous_volume <<< "$CURRENT_VOLUME"
+    fi
+fi
+
+pactl set-sink-volume 0 $SWITCH$AMOUNT%
+getCurrentVolume
+
+if [ "$CURRENT_VOLUME" -eq "0" ]; then
     ICON="muted"
-elif [ "$VALUE" -le "30" ]; then
+elif [ "$CURRENT_VOLUME" -le "30" ]; then
     ICON="low"
-elif [ "$VALUE" -gt "30" ] && [ "$VALUE" -le "70" ]; then
+elif [ "$CURRENT_VOLUME" -gt "30" ] && [ "$CURRENT_VOLUME" -le "70" ]; then
     ICON="medium"
-elif [ "$VALUE" -gt "70" ]; then
+elif [ "$CURRENT_VOLUME" -gt "70" ]; then
     ICON="high"
 fi
 
 kill $(pgrep ^notify-osd$)
-notify-send --icon=notification-audio-volume-$ICON --hint=int:value:$VALUE " "
+notify-send --icon=notification-audio-volume-$ICON --hint=int:value:$CURRENT_VOLUME " "
